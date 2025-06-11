@@ -86,7 +86,7 @@ func main() {
 			log.Println("Error parseando RAM:", err)
 		} else {
 			fmt.Println("RAM:", ramInfo)
-			// sendToAPI("http://localhost:3000/api/ram", ramInfo)
+			 sendToAPI("http://localhost:3000/api/ram", ramInfo)
 		}
 
 		cpuInfo, err := parseCPU(cpuRaw)
@@ -94,7 +94,7 @@ func main() {
 			log.Println("Error parseando CPU:", err)
 		} else {
 			fmt.Println("CPU:", cpuInfo)
-			// sendToAPI("http://localhost:3000/api/cpu", cpuInfo)
+			 sendToAPI("http://localhost:3000/api/cpu", cpuInfo)
 		}
 
 		time.Sleep(5 * time.Second)
