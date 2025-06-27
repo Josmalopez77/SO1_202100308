@@ -1,0 +1,40 @@
+version: '3.9'
+
+services:
+
+  agentemonitor:
+    image: josmalopez/agentemonitor:1       # Usamos  directamente la imagen local ya creada
+    depends_on:
+      - mysql
+
+
+  api-sopes1:
+    image: josmalopez/api-sopes1:1
+    restart: always
+    ports:
+      - "3000:3000"
+    depends_on:
+      - mysql
+      - agentemonitor
+
+
+  frontend-sopes1:
+    image: josmalopez/frontend-sopes1:1
+    ports:
+      - "3001:3001"
+    depends_on:
+      - api-sopes1
+  mysql:
+    image: mysql:8.0
+    container_name: mysql
+    restart: always
+    environment:
+      MYSQL_ROOT_PASSWORD: 123456
+      MYSQL_DATABASE: monitor_db
+    volumes:
+      - mysql_data:/var/lib/mysql
+    ports:
+      - "3306:3306"
+volumes:
+  mysql_data:
+

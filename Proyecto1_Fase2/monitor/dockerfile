@@ -1,0 +1,23 @@
+# Etapa de compilación
+FROM golang:1.21-alpine AS build
+
+# Crear directorio de trabajo
+WORKDIR /app
+
+# Copiar los archivos necesarios
+COPY go.mod ./
+COPY main.go ./
+
+# Compilar el binario
+RUN go build -o agent .
+
+# Etapa final (runtime)
+FROM alpine:latest
+
+WORKDIR /root/
+
+# Copiar el binario desde la etapa de compilación
+COPY --from=build /app/agent .
+
+# Ejecutar el agente
+CMD ["./agent"]
