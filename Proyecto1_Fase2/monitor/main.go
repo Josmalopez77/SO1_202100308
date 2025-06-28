@@ -27,6 +27,15 @@ type CPUInfo struct {
 	CPUUsagePercent    uint64 `json:"cpu_usage_percent"`
 }
 
+// Estructura para Procesos
+type ProcessInfo struct {
+	ProcesosCorriendo  int `json:"procesos_corriendo"`
+	TotalProcesos      int `json:"total_procesos"`
+	ProcesosDurmiendo  int `json:"procesos_durmiendo"`
+	ProcesosZombie     int `json:"procesos_zombie"`
+	ProcesosParados    int `json:"procesos_parados"`
+}
+
 // Leer archivo de /proc
 func readProcFile(path string) ([]byte, error) {
 	data, err := ioutil.ReadFile(path)
@@ -45,6 +54,12 @@ func parseRAM(data []byte) (RAMInfo, error) {
 
 func parseCPU(data []byte) (CPUInfo, error) {
 	var info CPUInfo
+	err := json.Unmarshal(data, &info)
+	return info, err
+}
+
+func parseProcess(data []byte) (ProcessInfo, error) {
+	var info ProcessInfo
 	err := json.Unmarshal(data, &info)
 	return info, err
 }
@@ -69,34 +84,56 @@ func sendToAPI(endpoint string, payload interface{}) {
 
 func main() {
 	for {
+		// Leer RAM
 		ramRaw, err := readProcFile("/proc/ram_202100308")
 		if err != nil {
 			log.Println("Error leyendo RAM:", err)
 			continue
 		}
 
+		// Leer CPU
 		cpuRaw, err := readProcFile("/proc/cpu_202100308")
 		if err != nil {
 			log.Println("Error leyendo CPU:", err)
 			continue
 		}
 
+		// Leer Procesos
+		procRaw, err := readProcFile("/proc/procesos_202100308")
+		if err != nil {
+			log.Println("Error leyendo Procesos:", err)
+		}
+
+		// Parsear y enviar RAM
 		ramInfo, err := parseRAM(ramRaw)
 		if err != nil {
 			log.Println("Error parseando RAM:", err)
 		} else {
 			fmt.Println("RAM:", ramInfo)
-			 sendToAPI("http://api-sopes1:3000/api/ram", ramInfo)
+			// sendToAPI("http://api-sopes1:3000/api/ram", ramInfo)
 		}
 
+		// Parsear y enviar CPU
 		cpuInfo, err := parseCPU(cpuRaw)
 		if err != nil {
 			log.Println("Error parseando CPU:", err)
 		} else {
 			fmt.Println("CPU:", cpuInfo)
-			 sendToAPI("http://api-sopes1:3000/api/cpu", cpuInfo)
+			// sendToAPI("http://api-sopes1:3000/api/cpu", cpuInfo)
+		}
+
+		// Parsear y enviar Procesos
+		if procRaw != nil {
+			procInfo, err := parseProcess(procRaw)
+			if err != nil {
+				log.Println("Error parseando Procesos:", err)
+			} else {
+				fmt.Println("Procesos:", procInfo)
+				// sendToAPI("http://api-sopes1:3000/api/procesos", procInfo)
+			}
 		}
 
 		time.Sleep(5 * time.Second)
 	}
 }
+
