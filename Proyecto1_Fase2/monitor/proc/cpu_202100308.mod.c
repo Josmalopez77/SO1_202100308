@@ -36,7 +36,7 @@ __used __section("__versions") = {
 	{ 0x1bf425ee, "proc_create" },
 	{ 0xd8912672, "seq_printf" },
 	{ 0xc60d0620, "__num_online_cpus" },
-	{ 0xa2feabdb, "init_task" },
+	{ 0x1e355686, "init_task" },
 	{ 0x5b8239ca, "__x86_return_thunk" },
 	{ 0x1764af7d, "single_open" },
 	{ 0xbdfb6dbb, "__fentry__" },

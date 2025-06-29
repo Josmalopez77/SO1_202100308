@@ -1,75 +1,92 @@
+import { io } from 'socket.io-client';
 import React, { useState, useEffect } from 'react';
-import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
-import { Activity, Cpu, HardDrive, Server } from 'lucide-react';
+import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
+import { Activity, Cpu, HardDrive, Server, Users, Play, Pause, AlertTriangle, Square } from 'lucide-react';
 import './App.css';
+
+const socket = io('http://localhost:4000');
 
 function App() {
   const [ramData, setRamData] = useState([]);
   const [cpuData, setCpuData] = useState([]);
+  const [processData, setProcessData] = useState([]);
   const [currentRAM, setCurrentRAM] = useState(null);
   const [currentCPU, setCurrentCPU] = useState(null);
+  const [currentProcesses, setCurrentProcesses] = useState(null);
   const [isConnected, setIsConnected] = useState(false);
 
-  // Función para obtener datos de RAM
-  const fetchRAMData = async () => {
-    try {
-      const response = await fetch('http://localhost:3000/api/ram');
-      const data = await response.json();
-      if (data.length > 0) {
-        setCurrentRAM(data[0]);
+  useEffect(() => {
+    // Manejar conexión
+    socket.on('connect', () => {
+      console.log('🔗 Conectado al servidor WebSocket');
+      setIsConnected(true);
+    });
+
+    // Manejar desconexión
+    socket.on('disconnect', () => {
+      console.log('❌ Desconectado del servidor WebSocket');
+      setIsConnected(false);
+    });
+
+    // Manejar errores de conexión
+    socket.on('connect_error', (error) => {
+      console.error('❌ Error de conexión:', error);
+      setIsConnected(false);
+    });
+
+    // Manejar métricas recibidas
+    socket.on('metrics', (data) => {
+      console.log("📡 Datos recibidos vía WebSocket:", data);
+
+      if (data.ram) {
+        setCurrentRAM(data.ram);
         setRamData(prev => {
           const newData = [...prev, {
             timestamp: new Date().toLocaleTimeString(),
-            usage: data[0].ram_usage_percent,
-            total: data[0].total_ram,
-            used: data[0].used_ram,
-            free: data[0].free_ram
+            usage: data.ram.ram_usage_percent,
+            total: data.ram.total_ram,
+            used: data.ram.used_ram,
+            free: data.ram.free_ram
           }];
           return newData.slice(-20); // Mantener solo los últimos 20 puntos
         });
       }
-      setIsConnected(true);
-    } catch (error) {
-      console.error('Error fetching RAM data:', error);
-      setIsConnected(false);
-    }
-  };
 
-  // Función para obtener datos de CPU
-  const fetchCPUData = async () => {
-    try {
-      const response = await fetch('http://localhost:3000/api/cpu');
-      const data = await response.json();
-      if (data.length > 0) {
-        setCurrentCPU(data[0]);
+      if (data.cpu) {
+        setCurrentCPU(data.cpu);
         setCpuData(prev => {
           const newData = [...prev, {
             timestamp: new Date().toLocaleTimeString(),
-            usage: data[0].cpu_usage_percent,
-            processes: data[0].total_processes,
-            running: data[0].running_processes,
-            cores: data[0].online_cpus
+            usage: data.cpu.cpu_usage_percent
           }];
-          return newData.slice(-20); // Mantener solo los últimos 20 puntos
+          return newData.slice(-20);
         });
       }
-    } catch (error) {
-      console.error('Error fetching CPU data:', error);
-    }
-  };
 
-  // Efecto para obtener datos cada 5 segundos
-  useEffect(() => {
-    const interval = setInterval(() => {
-      fetchRAMData();
-      fetchCPUData();
-    }, 5000);
+      // Corregir inconsistencia: usar "procesos" como en el socket.on, pero manejar ambos casos
+      const processesData = data.procesos || data.processes;
+      if (processesData) {
+        setCurrentProcesses(processesData);
+        setProcessData(prev => {
+          const newData = [...prev, {
+            timestamp: new Date().toLocaleTimeString(),
+            running: processesData.running_processes || processesData.procesos_corriendo,
+            total: processesData.total_processes || processesData.total_procesos
+          }];
+          return newData.slice(-20);
+        });
+      }
+    });
 
-    // Obtener datos inmediatamente
-    fetchRAMData();
-    fetchCPUData();
-
-    return () => clearInterval(interval);
+    // Cleanup function
+    return () => {
+      console.log('🧹 Limpiando listeners y desconectando socket');
+      socket.off('connect');
+      socket.off('disconnect');
+      socket.off('connect_error');
+      socket.off('metrics');
+      socket.disconnect();
+    };
   }, []);
 
   // Formatear bytes a formato legible
@@ -80,6 +97,30 @@ function App() {
     const i = Math.floor(Math.log(bytes) / Math.log(k));
     return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
   };
+
+  // Datos para el gráfico de procesos (pie chart)
+  const processChartData = currentProcesses ? [
+    { 
+      name: 'Corriendo', 
+      value: currentProcesses.procesos_corriendo || currentProcesses.running_processes || 0, 
+      color: '#10B981' 
+    },
+    { 
+      name: 'Durmiendo', 
+      value: currentProcesses.procesos_durmiendo || currentProcesses.sleeping_processes || 0, 
+      color: '#3B82F6' 
+    },
+    { 
+      name: 'Zombie', 
+      value: currentProcesses.procesos_zombie || currentProcesses.zombie_processes || 0, 
+      color: '#EF4444' 
+    },
+    { 
+      name: 'Parados', 
+      value: currentProcesses.procesos_parados || currentProcesses.stopped_processes || 0, 
+      color: '#F59E0B' 
+    }
+  ] : [];
 
   // Componente de tarjeta de métrica
   const MetricCard = ({ title, value, unit, icon: Icon, color }) => (
@@ -108,11 +149,11 @@ function App() {
           </div>
         </div>
 
-        {/* Métricas actuales */}
+        {/* Métricas principales */}
         <div className="metrics-grid">
           <MetricCard
             title="Uso de RAM"
-            value={currentRAM?.ram_usage_percent || 0}
+            value={currentRAM?.ram_usage_percent?.toFixed(1) || 0}
             unit="%"
             icon={HardDrive}
             color="#3B82F6"
@@ -126,21 +167,53 @@ function App() {
           />
           <MetricCard
             title="Uso de CPU"
-            value={currentCPU?.cpu_usage_percent || 0}
+            value={currentCPU?.cpu_usage_percent?.toFixed(1) || 0}
             unit="%"
             icon={Cpu}
             color="#F59E0B"
           />
           <MetricCard
-            title="Procesos"
-            value={currentCPU?.total_processes || 0}
+            title="Total Procesos"
+            value={currentProcesses?.total_procesos || currentProcesses?.total_processes || 0}
             unit=""
             icon={Activity}
             color="#EF4444"
           />
         </div>
 
-        {/* Gráficas */}
+        {/* Métricas de procesos */}
+        <div className="process-metrics-grid">
+          <MetricCard
+            title="Procesos Corriendo"
+            value={currentProcesses?.procesos_corriendo || currentProcesses?.running_processes || 0}
+            unit=""
+            icon={Play}
+            color="#10B981"
+          />
+          <MetricCard
+            title="Procesos Durmiendo"
+            value={currentProcesses?.procesos_durmiendo || currentProcesses?.sleeping_processes || 0}
+            unit=""
+            icon={Pause}
+            color="#3B82F6"
+          />
+          <MetricCard
+            title="Procesos Zombie"
+            value={currentProcesses?.procesos_zombie || currentProcesses?.zombie_processes || 0}
+            unit=""
+            icon={AlertTriangle}
+            color="#EF4444"
+          />
+          <MetricCard
+            title="Procesos Parados"
+            value={currentProcesses?.procesos_parados || currentProcesses?.stopped_processes || 0}
+            unit=""
+            icon={Square}
+            color="#F59E0B"
+          />
+        </div>
+
+        {/* Gráficas principales */}
         <div className="charts-grid">
           {/* Gráfica de RAM */}
           <div className="chart-container">
@@ -197,6 +270,60 @@ function App() {
           </div>
         </div>
 
+        {/* Gráficas de procesos */}
+        <div className="process-charts-grid">
+          {/* Gráfica de línea de procesos corriendo */}
+          <div className="chart-container">
+            <h2 className="chart-title">Procesos Corriendo en Tiempo Real</h2>
+            <ResponsiveContainer width="100%" height={300}>
+              <LineChart data={processData}>
+                <CartesianGrid strokeDasharray="3 3" />
+                <XAxis dataKey="timestamp" />
+                <YAxis />
+                <Tooltip 
+                  formatter={(value, name) => [
+                    value, 
+                    name === 'running' ? 'Procesos Corriendo' : name
+                  ]}
+                />
+                <Legend />
+                <Line 
+                  type="monotone" 
+                  dataKey="running" 
+                  stroke="#10B981" 
+                  strokeWidth={2}
+                  dot={{ fill: '#10B981', strokeWidth: 2, r: 4 }}
+                  name="Procesos Corriendo"
+                />
+              </LineChart>
+            </ResponsiveContainer>
+          </div>
+
+          {/* Gráfica de pie de distribución de procesos */}
+          <div className="chart-container">
+            <h2 className="chart-title">Distribución de Procesos</h2>
+            <ResponsiveContainer width="100%" height={300}>
+              <PieChart>
+                <Pie
+                  data={processChartData}
+                  cx="50%"
+                  cy="50%"
+                  outerRadius={80}
+                  fill="#8884d8"
+                  dataKey="value"
+                  label={({ name, value }) => `${name}: ${value}`}
+                >
+                  {processChartData.map((entry, index) => (
+                    <Cell key={`cell-${index}`} fill={entry.color} />
+                  ))}
+                </Pie>
+                <Tooltip />
+                <Legend />
+              </PieChart>
+            </ResponsiveContainer>
+          </div>
+        </div>
+
         {/* Información detallada */}
         <div className="details-grid">
           {/* Detalles RAM */}
@@ -218,7 +345,7 @@ function App() {
                 </div>
                 <div className="detail-row">
                   <span className="detail-label">Porcentaje de uso:</span>
-                  <span className="detail-value">{currentRAM.ram_usage_percent}%</span>
+                  <span className="detail-value">{currentRAM.ram_usage_percent?.toFixed(1)}%</span>
                 </div>
               </div>
             ) : (
@@ -245,7 +372,46 @@ function App() {
                 </div>
                 <div className="detail-row">
                   <span className="detail-label">Porcentaje de uso:</span>
-                  <span className="detail-value">{currentCPU.cpu_usage_percent}%</span>
+                  <span className="detail-value">{currentCPU.cpu_usage_percent?.toFixed(1)}%</span>
+                </div>
+              </div>
+            ) : (
+              <p className="no-data">Sin datos disponibles</p>
+            )}
+          </div>
+
+          {/* Detalles Procesos */}
+          <div className="details-container">
+            <h3 className="details-title">Detalles de Procesos</h3>
+            {currentProcesses ? (
+              <div className="details-content">
+                <div className="detail-row">
+                  <span className="detail-label">Total de procesos:</span>
+                  <span className="detail-value">{currentProcesses.total_procesos || currentProcesses.total_processes}</span>
+                </div>
+                <div className="detail-row">
+                  <span className="detail-label">Procesos corriendo:</span>
+                  <span className="detail-value status-running">
+                    {currentProcesses.procesos_corriendo || currentProcesses.running_processes}
+                  </span>
+                </div>
+                <div className="detail-row">
+                  <span className="detail-label">Procesos durmiendo:</span>
+                  <span className="detail-value status-sleeping">
+                    {currentProcesses.procesos_durmiendo || currentProcesses.sleeping_processes}
+                  </span>
+                </div>
+                <div className="detail-row">
+                  <span className="detail-label">Procesos zombie:</span>
+                  <span className="detail-value status-zombie">
+                    {currentProcesses.procesos_zombie || currentProcesses.zombie_processes}
+                  </span>
+                </div>
+                <div className="detail-row">
+                  <span className="detail-label">Procesos parados:</span>
+                  <span className="detail-value status-stopped">
+                    {currentProcesses.procesos_parados || currentProcesses.stopped_processes}
+                  </span>
                 </div>
               </div>
             ) : (

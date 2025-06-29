@@ -110,7 +110,7 @@ func main() {
 			log.Println("Error parseando RAM:", err)
 		} else {
 			fmt.Println("RAM:", ramInfo)
-			// sendToAPI("http://api-sopes1:3000/api/ram", ramInfo)
+			sendToAPI("http://127.0.0.1:3001/api/ram", ramInfo)
 		}
 
 		// Parsear y enviar CPU
@@ -119,7 +119,7 @@ func main() {
 			log.Println("Error parseando CPU:", err)
 		} else {
 			fmt.Println("CPU:", cpuInfo)
-			// sendToAPI("http://api-sopes1:3000/api/cpu", cpuInfo)
+			sendToAPI("http://127.0.0.1:3001/api/cpu", cpuInfo)
 		}
 
 		// Parsear y enviar Procesos
@@ -129,7 +129,7 @@ func main() {
 				log.Println("Error parseando Procesos:", err)
 			} else {
 				fmt.Println("Procesos:", procInfo)
-				// sendToAPI("http://api-sopes1:3000/api/procesos", procInfo)
+				sendToAPI("http://127.0.0.1:3001/api/procesos", procInfo)
 			}
 		}
 
