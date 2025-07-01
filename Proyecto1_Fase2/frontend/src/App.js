@@ -4,8 +4,10 @@ import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, Responsi
 import { Activity, Cpu, HardDrive, Server, Users, Play, Pause, AlertTriangle, Square } from 'lucide-react';
 import './App.css';
 
-const socket = io("http://34.31.247.234/socket", {
-  transports: ["websocket"],
+
+
+const socket = io("https://34.31.247.234/socket.io", {
+  transports: ["websocket"]
 });
 
 function App() {

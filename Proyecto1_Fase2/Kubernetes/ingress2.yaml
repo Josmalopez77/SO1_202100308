@@ -1,0 +1,57 @@
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: api-ingress-main
+  namespace: so1-fase2
+  annotations:
+    # Configuración general
+    nginx.ingress.kubernetes.io/proxy-read-timeout: "3600"
+    nginx.ingress.kubernetes.io/proxy-send-timeout: "3600"
+    nginx.ingress.kubernetes.io/proxy-buffering: "off"
+    
+    # WebSocket support
+    nginx.ingress.kubernetes.io/proxy-set-headers: |
+      Upgrade $http_upgrade;
+      Connection "upgrade";
+      Host $host;
+      X-Real-IP $remote_addr;
+      X-Forwarded-For $proxy_add_x_forwarded_for;
+      X-Forwarded-Proto $scheme;
+    
+    # CORS headers para permitir todo
+    nginx.ingress.kubernetes.io/cors-allow-origin: "*"
+    nginx.ingress.kubernetes.io/cors-allow-methods: "GET, POST, OPTIONS"
+    nginx.ingress.kubernetes.io/cors-allow-headers: "*"
+    nginx.ingress.kubernetes.io/enable-cors: "true"
+    
+spec:
+  ingressClassName: nginx
+  rules:
+    - http:
+        paths:
+          # API Python
+          - path: /api
+            pathType: Prefix
+            backend:
+              service:
+                name: api-python-service
+                port:
+                  number: 80
+
+          # WebSocket - permite cualquier conexión
+          - path: /socket
+            pathType: Prefix
+            backend:
+              service:
+                name: socket-service
+                port:
+                  number: 80
+                  
+          # Ruta adicional para socket.io específicamente
+          - path: /socket.io
+            pathType: Prefix
+            backend:
+              service:
+                name: socket-service
+                port:
+                  number: 80

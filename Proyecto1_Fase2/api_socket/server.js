@@ -6,11 +6,8 @@ import { pool } from './db.js';
 const app = express();
 const httpServer = createServer(app);
 const io = new Server(httpServer, {
-  cors: { 
-    origin: [
-      'http://frontend:3000',
-      'https://frontend2-883666132310.us-central1.run.app',
-    ], 
+  cors: {
+    origin: "*", // Permite cualquier origen
     methods: ['GET', 'POST']
   }
 });
