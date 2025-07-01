@@ -7,7 +7,10 @@ const app = express();
 const httpServer = createServer(app);
 const io = new Server(httpServer, {
   cors: { 
-    origin: ['http://frontend:3000'], // Más específico
+    origin: [
+      'http://frontend:3000',
+      'https://frontend2-883666132310.us-central1.run.app',
+    ], 
     methods: ['GET', 'POST']
   }
 });

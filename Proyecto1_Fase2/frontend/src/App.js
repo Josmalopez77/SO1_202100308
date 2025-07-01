@@ -4,7 +4,9 @@ import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, Responsi
 import { Activity, Cpu, HardDrive, Server, Users, Play, Pause, AlertTriangle, Square } from 'lucide-react';
 import './App.css';
 
-const socket = io('http://socket:4000');
+const socket = io("http://34.31.247.234/socket", {
+  transports: ["websocket"],
+});
 
 function App() {
   const [ramData, setRamData] = useState([]);
