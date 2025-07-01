@@ -6,7 +6,7 @@ import './App.css';
 
 
 
-const socket = io("https://34.31.247.234/socket.io", {
+const socket = io("http://34.31.247.234/socket", {
   transports: ["websocket"]
 });
 

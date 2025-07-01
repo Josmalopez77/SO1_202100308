@@ -6,11 +6,13 @@ import { pool } from './db.js';
 const app = express();
 const httpServer = createServer(app);
 const io = new Server(httpServer, {
+  path: "/socket",
   cors: {
-    origin: "*", // Permite cualquier origen
-    methods: ['GET', 'POST']
+    origin: "*",
+    methods: ["GET", "POST"]
   }
 });
+
 
 let clientesConectados = 0;
 
